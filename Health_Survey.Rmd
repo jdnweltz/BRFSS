@@ -3,7 +3,6 @@ title: "BRFSS Health Survey"
 author: "Justin Weltz and Andrew Brown"
 date: "2/5/2018"
 output:
-  word_document: default
   pdf_document:
     latex_engine: lualatex
 ---
@@ -26,16 +25,16 @@ BRFSS <- sasxport.get("LLCP2016.XPT ") #I had to import this file from a SAS for
 #View(BRFSS)
 ```
 
-Source of Data: The Behavioral Risk Factor Surveillance System (BRFSS) is conducted by the Centers for Disease Control (CDC).
+Source of Data: The Behavioral Risk Factor Surveillance System (BRFSS) is conducted by the Centers for Disease Control (CDC) on the United States Population (supposed to capture the noninstitutionalized adult population older than 18 years residing in the United States).
+
 
 Notes About the Data:
 
-1. 486,303 observations - the observations are individuals contacted by telephone (this biases the population they are sampling from and may make inferences taken from this study non-applicable to the general US population)
+1.	486,303 observations - the observations are individuals contacted by telephone (this biases the population they are sampling from and may make inferences taken from this study non-applicable to the general US population)
 
-2. There are 279 accessible variables (a lot of demographic information is ommited in order to preserve anonymity), but I will only be studying a subset of these dimensions.
+2.	There are 279 accessible variables (a lot of demographic information is omitted in order to preserve anonymity) on demographic characteristics, health-related risk behaviors, chronic health conditions, and use of preventative services. However, I will only be studying a subset of these dimensions.
 
-3. In many cases, "I don't know," "None," and "Refused" are coded as multiples of 7, 8 and 9 (depending on the range of numerical responses possible). I had to take them out of the data in order to accurately analyze variables. It is also going to be important to keep track of how many 'NA's are included in my characteristics of interest.
-
+3.	In many cases, "I don't know," "None," and "Refused" are coded as multiples of 7, 8 and 9 (depending on the range of numerical responses possible). I had to take them out of the data in order to accurately analyze variables. It is also going to be important to keep track of how many 'NA's are included in my characteristics of interest.
 
 
 Relevant Variables:
