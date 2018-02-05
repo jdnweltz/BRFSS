@@ -1,0 +1,188 @@
+---
+title: "BRFSS Health Survey"
+author: "Justin Weltz"
+date: "12/16/2017"
+output:
+  word_document: default
+  pdf_document:
+    latex_engine: lualatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning= FALSE, fig.height=3, fig.width=6, fig.align = "center")
+```
+
+```{r, echo= FALSE}
+#install.packages("Hmisc")
+ library(Hmisc)
+ library(foreign)
+ library(dplyr)
+ library(ggplot2)
+ library(skimr)
+BRFSS <- sasxport.get("LLCP2016.XPT ") #I had to import this file from a SAS format
+#BRFSS %>% head()
+#dim(BRFSS)
+#summary(BRFSS)
+#View(BRFSS)
+```
+
+Source of Data: The Behavioral Risk Factor Surveillance System (BRFSS) is conducted by the Centers for Disease Control (CDC).
+
+Notes About the Data:
+
+1. 486,303 observations - the observations are individuals contacted by telephone (this biases the population they are sampling from and may make inferences taken from this study non-applicable to the general US population)
+
+2. There are 279 accessible variables (a lot of demographic information is ommited in order to preserve anonymity), but I will only be studying a subset of these dimensions.
+
+3. In many cases, "I don't know," "None," and "Refused" are coded as multiples of 7, 8 and 9 (depending on the range of numerical responses possible). I had to take them out of the data in order to accurately analyze variables. It is also going to be important to keep track of how many 'NA's are included in my characteristics of interest.
+
+
+
+Relevant Variables:
+
+1) Sex (Categorical):
+
+```{r}
+BRFSS <- BRFSS %>% mutate(new_sex = ifelse(sex == 9, NA, sex))
+#this is indicative of the way many of the variables had to be converted 
+```
+
+The distribution is pretty evenly distributed between men and women, but there are still noticeably more women then men.
+
+2) Average Time Slept (Quantitative): Average time slept in hours over the past month
+
+```{r, echo= FALSE}
+BRFSS <- BRFSS %>% mutate(new_sleptim1 = ifelse(sleptim1 == 99 | sleptim1 == 77, NA, sleptim1))
+summary(BRFSS$new_sleptim1)
+BRFSS %>% ggplot() + geom_histogram(aes(x= new_sleptim1)) + labs(x = "Hours Slept")
+```
+
+I am slightly worried that there is a max value of 24 hours included in the response values. This observation calls into question the validity of the data since this reponse seems impossible. It is also interesting to not that the distribution seems pretty symmetrical around 7 hours.
+
+3) Days of Bad Mental Health (Quantitative): Days of poor mental health reported for the past month
+
+```{r, echo= FALSE}
+#clean variables
+BRFSS <- BRFSS %>% mutate(new_menthlth = ifelse(menthlth == 99 | menthlth == 77, NA,                                      ifelse(menthlth == 88, 0, menthlth)))
+skim(BRFSS$new_menthlth)
+```
+
+There are a large number of observations for this variable. It is interesting to note that the mdeian of this variable is 0 while the mean is 3.44. This seems to indicate that the data is very right skewed.
+
+4) Days of Poor Health (Quantitative): Days of poor health reported for the past month.
+
+```{r, echo= FALSE}
+BRFSS <- BRFSS %>% mutate(new_poorhlth = ifelse(poorhlth == 99 | poorhlth == 77, NA, 
+                                                ifelse(poorhlth == 88, 0, poorhlth)))
+
+skim(BRFSS$new_poorhlth)
+```
+
+This variable is interesting because about half of the observations are missing. The distribution is similar to the poor mental health distribution with a higher average and standard deviation.
+
+Graph Day of Poor Health and Poor Mental Health vs. Average Time Slept
+```{r, echo= FALSE}
+library(dplyr)
+library(ggplot2)
+BRFSS %>% ggplot() + geom_smooth(aes(x = new_sleptim1, y = new_poorhlth,
+                                     color = "Poor General Health")) + 
+  geom_smooth(aes(x = new_sleptim1,y  = new_menthlth, 
+                    color = "Poor Mental Health")) + 
+labs(x = "Hours Slept", y = "Days")
+```
+
+Generally (very descriptively), there seems to be a relaitionship between average hours slept and poor general and mental health days. Three interesting things pop out of this graph. 
+
+1. Poor mental health and poor general health seem to have a similar relaitionship to hours slept.
+
+2. The 7-8 hour sweet spoth that I often hear about in sleep studies pops out of the graph.
+
+3. The negative relaitionship between hours slept and poor mental and general health days makes me think very carefully about causality. It seems very unlikely that more hours of sleep are causing people to have more "poor days." I would wager that the direction of causation goes the opposite way, but more analysis will be required
+
+5) Average Alcholic Drinks (Quantitative): Average number of drinks per day over the past month.
+
+```{r, echo= FALSE}
+BRFSS <- BRFSS %>% mutate(new_avedrnk2 = ifelse(avedrnk2 == 99 | avedrnk2 == 77, NA,avedrnk2))
+skim(BRFSS$avedrnk)
+BRFSS %>% ggplot() + geom_smooth(aes(x=new_avedrnk2, y = new_menthlth)) + 
+  labs(x = "Average Drinks Per Day", y = "Poor Mental Health Days")
+```
+
+The distribution of this variable because there are distinct outliers. When analyzing this variable it will be important to better understand the drinkers who report that they have more than 50 drinks a week. The relaitionship between poor mental health days and average drinks is also not as pronounced as I thought it would, especially for respondents who report very high average drinks per day (although this may be because there are just so few data points in the high range).
+
+6) General Health (Categorical): Health status judged on a scale of:
+1 - Excellent
+2- Very good
+3- Good
+4 - Fair
+5 - Poor
+7 - Don’t know/Not Sure
+9 - Refused
+
+```{r, echo= FALSE}
+BRFSS <- BRFSS %>% mutate(new_genhlth = ifelse(genhlth == 9 | 
+                                                 genhlth == 7, NA, genhlth))
+skim(BRFSS$new_genhlth)
+```
+
+It seems that general health is pretty evenly distributed around "Good."
+
+7) Exercise in Past 30 days (Categorical): Whether or not a participant has exercised in the last 30 days. 
+
+Table
+```{r, echo= FALSE}
+BRFSS <- BRFSS %>% mutate(new_exercise = ifelse(exerany2 == 7 | exerany2 == 9, NA,exerany2))
+table(BRFSS$new_exercise)
+```
+It is interesting how many survey participants haven't excercised at all in the last month.
+
+
+8) Education (Categorical): Educational Status
+
+1- Never attended school or only kindergarten
+2- Grades 1 through 8 (Elementary)
+3- Grades 9 through 11 (Some high school)
+4- Grade 12 or GED (High school graduate)
+5- College 1 year to 3 years (Some college or
+technical school)
+6- College 4 years or more (College graduate)
+
+```{r, echo= FALSE}
+BRFSS <- BRFSS %>% mutate(new_educa = ifelse(educa == 9, NA,educa))
+BRFSS %>% ggplot() + geom_histogram(aes(x= new_educa)) + labs(x = "Education")
+```
+This distribution is interesting because most participants haven't completed college and some respondents haven't completed highschool. The single largest category is college graduates though.
+
+9) Veteran (Categorical): Whether the survery participant is a veteran or not.
+
+Table
+```{r, echo= FALSE}
+BRFSS <- BRFSS %>% mutate(new_veteran3 = ifelse(veteran3 == 9 | veteran3 == 7, NA,veteran3))
+table(BRFSS$new_veteran3)
+```
+There are not that many veterans in the population in proportionally. But, I am including it as a relevant variable because I am curious what it's predictive power will be on poor mental health days.
+
+Comparison of Averages
+
+```{r, echo=FALSE}
+BRFSS %>% group_by(new_veteran3) %>% summarise(poor_mental_health_days = mean(new_menthlth, na.rm = TRUE))
+```
+
+This is interesting because the averages do not demonstrate what I though I would observe. Instead of the veterans having higher average poor mental health days than non-veterans, the table above demostrates the opposite trend. It will be interesting to look more closely at why this might be.
+
+10) Income Level (Categorical): An income variable with 8 categories
+
+1- Less than $10,000
+2- Less than 15,000 (10,000 to less than 15,000) Notes: If "no," code 03; if "yes," ask
+3- Less than 20,000 (15,000 to less than 20,000) Notes: If "no," code 04; if "yes," ask
+4- Less than 25,000 (20,000 to less than 25,000) Notes: If "no," ask 05; if "yes," ask 
+5- Less than 35,000 (25,000 to less than 35,000) Notes: If "no," ask 06
+6- Less than 50,000 (35,000 to less than 50,000) Notes: If "no," ask 07
+7- Less than 75,000 (50,000 to less than 75,000) Notes: If "no," code 08
+8- $75,000 or more
+```{r, echo= FALSE }
+BRFSS <- BRFSS %>% mutate(new_income = ifelse(income2 == 99 | income2 == 77, NA, income2))
+skim(BRFSS$new_income)
+```
+
+The income variable seems pretty symmetrically distributed around a median income category of 6 (which are participants with incomes between 35,000 to less than 50,000 dollars)
