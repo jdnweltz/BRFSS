@@ -1,0 +1,205 @@
+---
+title: "BRFSS Health Survey - SLR"
+author: "Justin Weltz and Andrew Brown"
+date: "2/12/2018"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE, fig.height=1.5, fig.width=2}
+knitr::opts_chunk$set(echo = TRUE)
+
+ library(Hmisc)
+ library(foreign)
+ library(dplyr)
+ library(ggplot2)
+ library(skimr)
+ library(broom)
+BRFSS <- sasxport.get("LLCP2016.XPT ")
+
+BRFSS <- BRFSS %>% mutate(new_poorhlth = ifelse(poorhlth == 99 | poorhlth == 77, NA, 
+                                                ifelse(poorhlth == 88, 0, poorhlth)))
+
+BRFSS <- BRFSS %>% mutate(new_menthlth = ifelse(menthlth == 99 | menthlth == 77, NA,                                      ifelse(menthlth == 88, 0, menthlth)))
+
+BRFSS <- BRFSS %>% mutate(new_avedrnk2 = ifelse(avedrnk2 == 99 | avedrnk2 == 77, NA,avedrnk2))
+```
+
+### Introduction:
+
+The Behavioral Risk Factor Surveillance System (BRFSS) is a CDC conducted study on the American population. It is the largest continuous health survey in the world, and it targets building health promotion activities. Some variables of interest include sex, Days of Poor Health, Average Alcoholic Drinks, Exercise in the Past 30 Days, and Interest.
+
+### Hypotheses
+
+We want to test if there is a linear relationship between Average Alcoholic Drinks and Days of Bad Mental Health.
+
+$H_o: \beta_1 = 0$
+
+$H_a: \beta_1 \neq 0$
+
+### Assumptions
+
+Linearity:
+```{r, fig.height=2.25, fig.width=3, warning=FALSE}
+ggplot(BRFSS, aes(x = new_avedrnk2, y = new_menthlth)) + geom_point(size = 0.2) + ggtitle("Drinks per Day vs. Days of Poor Health") + theme(plot.title = element_text(size = 10))
+```
+
+It appears that there is a slight negative relationship between the amount of drinks one has per day and the number of days of poor mental health in the last 30 days.
+
+```{r, fig.height=2.25, fig.width=3}
+mod1 <- lm(new_menthlth ~ new_avedrnk2, data = BRFSS)
+xyplot(rstandard(mod1) ~ fitted(mod1), cex = 0.2)
+```
+The residuals are not normally distributed along 0, and the variance is not constant, so transformations may help.
+
+
+```{r, fig.height=2.25, fig.width=3}
+BRFSS <- BRFSS %>% mutate(new_menthlth_sqrt = (new_menthlth)^(1/2))
+
+BRFSS <- BRFSS %>% mutate(new_avedrnk2_e = exp(-new_avedrnk2))
+
+mod1T <- lm(new_menthlth_sqrt ~ new_avedrnk2_e, data = BRFSS)
+xyplot(rstandard(mod1T) ~ fitted(mod1T), cex = 0.2, alpha = 0.1)
+```
+These residuals are have constant variance, and are closer to normally distributed around 0.
+
+### CI for $\beta_1$
+
+```{r}
+confint(mod1T, 'new_avedrnk2_e', level = 0.95)
+```
+
+I am 95% confident that the true mean value for the expected number of square root days of poor mental health in the last 30 days lies between -0.9227 and -0.8373 when comparing two observations that are $e^{-1}$ number of drinks had in a day different.
+
+
+### Plot
+
+```{r, fig.height=2.25, fig.width=3, warning=FALSE}
+ggplot(BRFSS, aes(x = new_avedrnk2_e, y = new_menthlth_sqrt)) + geom_point(size = 0.2) + ggtitle("Drinks per Day vs. Days of Poor Health, Transformed") + theme(plot.title = element_text(size = 7))
+```
+
+```{r}
+predict.lm(mod1T, newdata =  data.frame(new_avedrnk2_e = 5), interval = "confidence")
+
+
+```
+```{r, echo=FALSE}
+(-3.54)^2
+(-3.13)^2
+```
+I am 95% confident that the true median value for someone who has 5 drinks a day will have had between 9.8 and 12.5 days of poor mental health in the past 30 days.
+
+```{r}
+predict.lm(mod1T, newdata =  data.frame(new_avedrnk2_e = 5), interval = "predict")
+```
+```{r, echo=FALSE}
+(-6.32)^2
+(-0.345)^2
+```
+
+I am 95% confident that an individual who has 5 drinks a day will have had between 0.119 and 39.9 days of poor mental health in the past 30 days.
+ 
+
+```{r, warning=FALSE, echo=FALSE}
+# Intervals for each observation
+crit_val <- qt(.975, glance(mod1T)$df.resid)
+mod1T_gl <- broom::glance(mod1T)
+mod1T_sig <- dplyr::pull(mod1T_gl, sigma)
+mod1T_pred <- broom::augment(mod1T) %>%
+  mutate(.se.pred = sqrt(mod1T_sig^2 + .se.fit^2)) %>%
+  mutate(lower_PI = .fitted - crit_val*.se.pred,
+  upper_PI = .fitted + crit_val*.se.pred,
+  lower_CI = .fitted - crit_val * .se.fit,
+  upper_CI = .fitted + crit_val * .se.fit)
+```
+
+```{r, warning=FALSE, echo=FALSE}
+num_int <- 3
+crit_Bonf <- qt((1-.975)/num_int, glance(mod1T)$df.resid)
+
+#Intervals for all observations - Bonferroni
+mod1T_Bonf <- broom::augment(mod1T) %>%
+  mutate(.se.pred = sqrt(mod1T_sig^2 + .se.fit^2)) %>%
+  mutate(lower_PI = .fitted - crit_Bonf*.se.pred,
+  upper_PI = .fitted + crit_Bonf*.se.pred,
+  lower_CI = .fitted - crit_Bonf * .se.fit,
+  upper_CI = .fitted + crit_Bonf * .se.fit)
+```
+
+```{r, warning=FALSE, echo=FALSE}
+crit_WH <- sqrt(2*qf(.95, num_int, glance(mod1T)$df.resid))
+
+#Intervals for all observations - Working-Hotelling
+mod1T_WH <- broom::augment(mod1T) %>%
+  mutate(.se.pred = sqrt(mod1T_sig^2 + .se.fit^2)) %>%
+  mutate(lower_PI = .fitted - crit_WH*.se.pred,
+  upper_PI = .fitted + crit_WH*.se.pred,
+  lower_CI = .fitted - crit_WH * .se.fit,
+  upper_CI = .fitted + crit_WH * .se.fit)
+```
+
+```{r, warning=FALSE, echo=FALSE, fig.height=2.25, fig.width=3}
+# Plots for mean intervals
+
+# No adjustment
+ggplot(mod1T_pred, aes(x = new_avedrnk2_e, y = new_menthlth_sqrt)) + geom_point(size = 0.2) +
+  stat_smooth(method = "lm", se = FALSE) +
+  geom_ribbon(aes(ymin = lower_CI, ymax = upper_CI), alpha = .2) +
+  ggtitle("CI with No Adjustment")
+
+# Bonferroni
+ggplot(mod1T_Bonf, aes(x = new_avedrnk2_e, y = new_menthlth_sqrt)) + geom_point(size = 0.2) +
+  stat_smooth(method = "lm", se = FALSE) +
+  geom_ribbon(aes(ymin = lower_CI, ymax = upper_CI), alpha = .2) +
+  ggtitle("CI with Bonferroni")
+
+# Working-Hotelling
+ggplot(mod1T_WH, aes(x = new_avedrnk2_e, y = new_menthlth_sqrt)) + geom_point(size = 0.2) +
+  stat_smooth(method = "lm", se = FALSE) +
+  geom_ribbon(aes(ymin = lower_CI, ymax = upper_CI), alpha = .2) +
+  ggtitle("CI with Working-Hotelling")
+```
+
+```{r, warning=FALSE, echo=FALSE, fig.height=2.25, fig.width=3}
+# Plots for prediction intervals
+
+# No adjustment
+ggplot(mod1T_pred, aes(x = new_avedrnk2_e, y = new_menthlth_sqrt)) + geom_point(size = 0.2) +
+  stat_smooth(method = "lm", se = FALSE) +
+  geom_ribbon(aes(ymin = lower_PI, ymax = upper_PI), alpha = .2) +
+  ggtitle("PI with No Adjustment")
+
+# Bonferroni
+ggplot(mod1T_Bonf, aes(x = new_avedrnk2_e, y = new_menthlth_sqrt)) + geom_point(size = 0.2) +
+  stat_smooth(method = "lm", se = FALSE) +
+  geom_ribbon(aes(ymin = lower_PI, ymax = upper_PI), alpha = .2) +
+  ggtitle("PI with Bonferroni")
+
+# Working-Hotelling
+ggplot(mod1T_WH, aes(x = new_avedrnk2_e, y = new_menthlth_sqrt)) + geom_point(size = 0.2) +
+  stat_smooth(method = "lm", se = FALSE) +
+  geom_ribbon(aes(ymin = lower_PI, ymax = upper_PI), alpha = .2) +
+  ggtitle("PI with Working-Hotelling")
+```
+
+It is important to adjust for multiple comparisons because there is always a chance that we get results purely due to chance. Multiple comparisons adjustments take many different statistical tests (in our case, one for each observation), and attempt to reduce the number of false positives. Bonferroni does this by putting the observations into a certain number of intervals, and creating intervals for each, and Working-Hotelling does so for the entire range of explanatory values.
+For mean intervals and prediction intervals, the intervals with no adjustment are the best lines to communicate results because they are the smallest intervals while still capturing meaningful values.
+
+### Assessment
+
+```{r, echo=FALSE, results='hide'}
+summary(mod1T)
+```
+
+From our model with transformations, we get an $R^2$ value of 0.007. This makes sense as our residuals also do not show a great linear relationship. The residual plot of our transformed model shows that the residuals are not normally distributed around 0, indicating that a linear model may not be appropriate for the relationship between these two variables.
+
+
+### Conclusion
+
+Our results are not surprising given our data. While one could think that there may be an obvious relationship between drinking and mental health, it is not as simple as a linear one. There are many people who suffer from poor mental health from other substances than alcohol, or from something unrelated to substance abuse. Additionally, there are people who drink excessively who are fully functioning and have no mental health issues. There are other factors that go into an individual's mental health than solely how many drinks they have each day, so a linear model is not the best way to show the relationship between the two variables.
+
+
+
+
