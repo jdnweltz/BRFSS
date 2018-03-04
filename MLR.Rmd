@@ -1,0 +1,150 @@
+---
+title: "BRFSS Health Survey - MLR"
+author: "Justin Weltz and Andrew Brown"
+date: "3/4/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+ library(Hmisc)
+ library(foreign)
+ library(dplyr)
+ library(ggplot2)
+ library(skimr)
+BRFSS <- sasxport.get("LLCP2016.XPT ") #I had to import this file from a SAS format
+
+#Columns 276-285
+BRFSS <- BRFSS %>% mutate(new_sex = ifelse(sex == 9, NA, sex))
+
+BRFSS <- BRFSS %>% mutate(new_sleptim1 = ifelse(sleptim1 == 99 | sleptim1 == 77, NA, sleptim1))
+
+BRFSS <- BRFSS %>% mutate(new_menthlth = ifelse(menthlth == 99 | menthlth == 77, NA,                                      ifelse(menthlth == 88, 0, menthlth)))
+
+BRFSS <- BRFSS %>% mutate(new_poorhlth = ifelse(poorhlth == 99 | poorhlth == 77, NA, 
+                                                ifelse(poorhlth == 88, 0, poorhlth)))
+
+BRFSS <- BRFSS %>% mutate(new_avedrnk2 = ifelse(avedrnk2 == 99 | avedrnk2 == 77, NA,avedrnk2))
+
+BRFSS <- BRFSS %>% mutate(new_genhlth = ifelse(genhlth == 9 | 
+                                                 genhlth == 7, NA, genhlth))
+
+BRFSS <- BRFSS %>% mutate(new_exercise = ifelse(exerany2 == 7 | exerany2 == 9, NA,exerany2))
+
+BRFSS <- BRFSS %>% mutate(new_educa = ifelse(educa == 9, NA,educa))
+
+BRFSS <- BRFSS %>% mutate(new_veteran3 = ifelse(veteran3 == 9 | veteran3 == 7, NA,veteran3))
+
+BRFSS <- BRFSS %>% mutate(new_income = ifelse(income2 == 99 | income2 == 77, NA, income2))
+
+```
+
+### Introduction
+
+The Behavioral Risk Factor Surveillance System (BRFSS) is conducted by the Centers for Disease Control (CDC) on the United States Population (supposed to capture the noninstitutionalized adult population older than 18 years residing in the United States).
+
+486,303 observations - the observations are individuals contacted by telephone (this biases the population they are sampling from and may make inferences taken from this study non-applicable to the general US population)
+
+There are 279 accessible variables (a lot of demographic information is omitted in order to preserve anonymity) on demographic characteristics, health-related risk behaviors, chronic health conditions, and use of preventative services. However, I will only be studying a subset of these dimensions.
+
+### Model Building
+
+response: Mental Health Days
+
+explanatory: Average Drinks (cont), Gen Health (categ), Avg hours slept (cont), sex (categ), vetaran status (categ)
+
+### Pairs Plot
+
+```{r}
+pairs(BRFSS[c(278, 280, 277, 281)], cex=0.3)
+```
+It appears that all of the relationships between these variables are parabolic
+
+```{r}
+pairs(BRFSS[c(278, 280, 277, 281)], cex=0.3, log="xy")
+```
+
+### Interaction
+
+Veteran*Sex
+Veteran*Drink
+Sex*Drink
+
+### Model Fitting
+
+```{r}
+BRFSS$new_genhlth <- as.factor(BRFSS$new_genhlth)
+BRFSS$new_sex <- as.factor(BRFSS$new_sex)
+BRFSS$new_veteran3 <- as.factor(BRFSS$new_veteran3)
+brfssMod <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = BRFSS)
+summary(brfssMod)
+```
+
+### Coefficients
+
+
+
+### F-test
+
+```{r}
+brfssModNoInt <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2, data = BRFSS)
+anova(brfssMod, brfssModNoInt)
+```
+
+
+### $R^2$ Values
+
+
+
+### Residuals
+
+```{r}
+xyplot(rstandard(brfssMod) ~ fitted(brfssMod), cex = 0.2)
+```
+NEED HELP WITH THIS SECTION
+
+
+### Variable Selection
+ASK ABOUT THIS SECTION
+
+```{r}
+require(leaps)
+
+col.best <- regsubsets(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_avedrnk2 + new_sleptim1, data = BRFSS, nvmax=5)
+col.best.sum <- summary(col.best)
+which.min(col.best.sum$cp)
+which.max(col.best.sum$adjr2)
+which.min(col.best.sum$bic)
+```
+
+
+
+### Model Interpretation
+
+
+
+###Confidence Interval
+
+
+
+### Coefficient of Partial Determination
+
+
+
+
+### Summary
+
+
+
+
+
+
+
+
+
+
+
