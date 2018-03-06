@@ -11,12 +11,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r}
- library(Hmisc)
- library(foreign)
- library(dplyr)
- library(ggplot2)
- library(skimr)
-BRFSS <- sasxport.get("LLCP2016.XPT ") #I had to import this file from a SAS format
+library(Hmisc)
+library(foreign)
+library(dplyr)
+library(ggplot2)
+library(skimr)
+BRFSS <- sasxport.get("LLCP2016.XPT ")
 
 #Columns 276-285
 BRFSS <- BRFSS %>% mutate(new_sex = ifelse(sex == 9, NA, sex))
@@ -142,6 +142,15 @@ which.min(col.best.sum$bic)
 
 
 
+```{r}
+brfssModT <- lm(log(new_menthlth + 1) ~ new_genhlth + new_sex + new_veteran3 + log(new_sleptim1 + 1) + log(new_avedrnk2 + 1) + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = BRFSS)
+
+
+brfssModQ <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 +I(new_sleptim1^2) + new_avedrnk2 + I(new_avedrnk2^2) + new_sex*new_avedrnk2 + new_sex*I(new_avedrnk2^2) + new_sex*new_veteran3 + new_veteran3*new_avedrnk2 + new_veteran3*I(new_avedrnk2^2), data = BRFSS)
+
+
+xyplot(rstandard(brfssModQ) ~ fitted(brfssModQ), cex = 0.2)
+```
 
 
 
