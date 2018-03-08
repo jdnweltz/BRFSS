@@ -64,10 +64,6 @@ pairs(BRFSS[c(278, 280, 277, 281)], cex=0.3)
 ```
 It appears that all of the relationships between these variables are parabolic
 
-```{r}
-pairs(BRFSS[c(278, 280, 277, 281)], cex=0.3, log="xy")
-```
-
 ### Interaction
 
 Veteran*Sex
@@ -106,6 +102,15 @@ anova(brfssMod, brfssModNoInt)
 xyplot(rstandard(brfssMod) ~ fitted(brfssMod), cex = 0.2)
 ```
 NEED HELP WITH THIS SECTION
+
+
+##Variable Scatter Plots
+
+```{r}
+require(broom)
+residual_table <- augment(brfssMod)
+plot(BRFSS$new_menthlth, BRFSS$new_avedrnk2)
+```
 
 
 ### Variable Selection
