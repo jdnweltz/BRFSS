@@ -135,6 +135,17 @@ which.min(col.best.sum$bic)
 ###Confidence Interval
 
 
+```{r}
+predict.lm(brfssMod, newdata =  data.frame(new_menthlth = 5), interval = "confidence")
+```
+
+```{r}
+predict.lm(brfssMod, newdata =  data.frame(new_menthlth = 5), interval = "predict")
+```
+
+
+
+
 
 ### Coefficient of Partial Determination
 
