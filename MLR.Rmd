@@ -2,7 +2,7 @@
 title: "BRFSS Health Survey - MLR"
 author: "Justin Weltz and Andrew Brown"
 date: "3/4/2018"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-```{r}
+```{r, include= FALSE, message = FALSE, warning= FALSE}
 library(Hmisc)
 library(foreign)
 library(dplyr)
@@ -45,44 +45,148 @@ BRFSS <- BRFSS %>% mutate(new_income = ifelse(income2 == 99 | income2 == 77, NA,
 
 ### Introduction
 
-The Behavioral Risk Factor Surveillance System (BRFSS) is conducted by the Centers for Disease Control (CDC) on the United States Population (supposed to capture the noninstitutionalized adult population older than 18 years residing in the United States).
-
-486,303 observations - the observations are individuals contacted by telephone (this biases the population they are sampling from and may make inferences taken from this study non-applicable to the general US population)
-
-There are 279 accessible variables (a lot of demographic information is omitted in order to preserve anonymity) on demographic characteristics, health-related risk behaviors, chronic health conditions, and use of preventative services. However, I will only be studying a subset of these dimensions.
+The Behavioral Risk Factor Surveillance System (BRFSS) is conducted by the Centers for Disease Control (CDC) on the United States Population (and is supposed to capture the noninstitutionalized adult population older than 18 years residing in the United States). The public data set contains 486,303 observations. Each of these rows are individuals contacted by telephone (this biases the population they are sampling from and may make inferences taken from this study non-applicable to the general US population). There are 279 accessible variables (a lot of demographic information is omitted in order to preserve anonymity) on demographic characteristics, health-related risk behaviors, chronic health conditions, and use of preventative services. However, we will only be studying a subset of these dimensions.
 
 ### Model Building
 
-response: Mental Health Days
+The BRFSS Data Set contains a variable called "Number of Days Mental Health Not Good," which is the interviewee's numerical response to the question: "Now thinking about your mental health, which includes stress, depression, and problems with emotions, for how many days during the past 30 days was your mental health not good?" We decided to regress this continuous variable on five explanatory variables. However, before moving forward, it is important to acknowledge that there is an interesting (and possibly problematic) imbalance to the days of bad mental health variable: 329,500 people report that they have experienced zero days of bad mental health in the past 30 days. This may pull our linear regressions in weird directions later in the project. But now, the explanatory variables:
 
-explanatory: Average Drinks (cont), Gen Health (categ), Avg hours slept (cont), sex (categ), vetaran status (categ)
+1. Average Drinks - Continuous (This has distinct outliers; some participants reported that they have as many as 50 drinks a day).
+
+2. General Health - Categorical (We coded this as a factor variable because, while it is on an incrementing scale, the responses are descriptive and therefore hard to quantatify relative to one another).
+
+3. Average Hours Slept - Continuous (This variable is pretty uniformly distributed around a mean of 7.054 hours).
+
+4. Sex - Categorical (The paricipants are pretty evenly distributed between mena and women).
+
+5. Veteran Status - Categorical (The relationship between veteran status and Post Traumatic Stress Disorder may make it an interesting variable to analyze in the context of mental health).
 
 ### Pairs Plot
 
-```{r}
+```{r,eval= TRUE}
 pairs(BRFSS[c(278, 280, 277, 281)], cex=0.3)
 ```
-It appears that all of the relationships between these variables are parabolic
+Considering the number of observations we are analyzing, observations on a scatter plot should be taken with a lot of salt because it is very to distinguish the density of points with the naked eye. For example, the graphs associated with general health contain very little information because all the observations are compressed into 5 lines (We didn't even include the veteran and sex variable in the pairs plot because they had the same problem). Both the daily drinks variable and the sleep time seem to have a roughly parabolic relationship with bad mental health days variable and with eachother. In fact, it is interesting to note that daily drinks and daily sleep time have a very similar relationship to mental health. However, this does not mean that we should fit a parabolic term for each variable necessarily. In fact, these sideways parabolas seem to reflect a non-functional relationship (it fails the vertical line test), but again this hard to eyeball since we don't have a feel for the density of the points at this time. Lastly, it is interesting to note that there seems to be an outlier in the average drink variable that will be interesting to analyze later as an influential point.
 
 ### Interaction
 
-Veteran*Sex
-Veteran*Drink
-Sex*Drink
+There are a couple interactions that we will include in our model:
+
+1. Veteran and Sex: Male and female soldies may have significantly different experiences (that would have an effect on the prevalence of PTSD or other mental health problems).
+
+2. Veteran and Drink: We hypothesize that being in a generally vulnerable mental state (after war) and then drinking will be significantly different from drinking as a normal citizen.
+
+3. Sex and Drink: Since it seems that society views female and male drinking behavior differently, drinking as a female may be significantly different from drinking as a male (in terms of its correlation with bad mental health days).
+
 
 ### Model Fitting
 
-```{r}
+We will first attempt to fit the model normally with the explanatory variables and interaction terms and examine the residual plot.
+
+```{r, include=FALSE}
 BRFSS$new_genhlth <- as.factor(BRFSS$new_genhlth)
 BRFSS$new_sex <- as.factor(BRFSS$new_sex)
 BRFSS$new_veteran3 <- as.factor(BRFSS$new_veteran3)
 brfssMod <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = BRFSS)
+```
+
+```{r}
+xyplot(rstandard(brfssMod) ~ fitted(brfssMod), cex = 0.2)
+```
+
+It is clear that there are some problems here. First and foremost, the errors are far from normally distributed. This seems to be an issue with the functional relationship between X and Y - a problem that we would fix by doing some tranformations on X. However, after enumerable attempts (that I won't list here), we were not able to change this residual plot with transformations. 
+
+We decided to look more closely at the relationship between our explanatory variables and bad mental health days:
+
+First, we looked more closely at the residuals graphed on the scatterplot in order to get a better sense for how the linear model was interpreting the relationship between the explanatory variables and the response.
+
+The most interesting plot is below:
+```{r, include= FALSE, warning= FALSE, message= FALSE}
+require(broom)
+require(ggplot2)
+residual_table <- augment(brfssMod)
+#residual_table
+```
+
+```{r}
+ggplot(data = residual_table, aes(x = new_avedrnk2, y = new_menthlth)) + 
+  geom_point(aes(color = .resid)) + scale_color_gradient2()
+```
+
+```{r, include= FALSE, eval= FALSE}
+require(broom)
+require(ggplot2)
+residual_table <- augment(brfssMod)
+#residual_table
+ggplot(data = residual_table, aes(x = new_avedrnk2, y = new_menthlth)) + 
+  geom_point(aes(color = .resid)) + scale_color_gradient2()
+ggplot(data = residual_table, aes(x = new_genhlth, y = new_menthlth)) + 
+  geom_point(aes(color = .resid))+ scale_color_gradient2()
+ggplot(data = residual_table, aes(x = new_sleptim1, y = new_menthlth)) + 
+  geom_point(aes(color = .resid))+ scale_color_gradient2()
+ggplot(data = residual_table, aes(x = new_sex, y = new_menthlth)) + 
+  geom_point(aes(color = .resid))+ scale_color_gradient2()
+ggplot(data = residual_table, aes(x = new_veteran3, y = new_menthlth)) + 
+  geom_point(aes(color = .resid))+ scale_color_gradient2()
+```
+
+It is clear from this graph that the linear model believes daily drinks and bad mental health days to be generally positively correlated. This contradicts our initial obeservation that there doesn't seem to be a functional relationship between the two variables. Is this causing the problem? Should there be another variable in the model? Or, is this the true mean relationship between the two variables. It is still not possible to truly answer these questions with the plot above.
+
+Consequently, we try another analysis of the relationship between daily drinks and bad mental health days. If the average of bad mental health days conditional on daily drinks is in fact a positive linear relationship, then a moving weighted average (or spline?), should capture this trend as well. With this in mind, we create the graph below:
+
+```{r, warning= FALSE, message= FALSE}
+ggplot(data=BRFSS, aes(x= new_avedrnk2, y = new_menthlth )) + geom_point() + geom_smooth(method = "lm", se = T, color = "blue" ) + geom_smooth(se = T, color = "black")
+```
+
+```{r, include= FALSE, eval= FALSE}
+ggplot(data=BRFSS, aes(x= new_avedrnk2, y = new_menthlth )) + geom_point() + geom_smooth(method = "lm", se = T, color = "blue" ) + geom_smooth(se = T, color = "black")
+ggplot(data=BRFSS, aes(x= new_sleptim1, y = new_menthlth )) + geom_point() + geom_smooth(method = "lm", se = T, color = "blue" ) + geom_smooth(se = T, color = "black")
+```
+
+This is fascinating. While the linear regression is a positive, straight line (by construct), the spline reflects a different relationship. In the range of about 0-15 daily drinks, the two lines seem to approximate eachother. However, after the initial period, the line continues on its predetermined path while the spline curves into a horizontal line (suggesting very little relationship between the two variables in this higher range). While the spline is not necessarily the truth (this method has its own problems), the large discrepancy between these two methods' results may reflect a larger problem with including this variable in the model.
+
+In this vein, we decide to fit a model without the daily drinks variable and look at the residual plot. 
+
+```{r}
+brfssModa <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_sex*new_veteran3, data = BRFSS)
+xyplot(rstandard(brfssModa) ~ fitted(brfssModa), cex = 0.2)
+```
+
+The residual plot looks the same! At this point, for fear of banging our heads against too many walls, we move on and hope to find the key to this mysteriously mishappen residual plot later on in the project.
+
+###Coefficients and Inferences
+
+```{r}
 summary(brfssMod)
 ```
 
-### Coefficients
+Now that we know our residual plot is far from ideal, it is important to take the inferences above with a grain of salt. That being said, this is a very impressive looking coefficient table.  Every p-value is essentialy 0, except for two of the interaction variables. However, in order to be conservative, let's just look at the sign of our coefficients so we are less likely to make false conclusions based on magnitudes that we can't properly contextualize with good estimates of standard error.
+
+Sex - Men report more bad mental health days than women. Interesting.
+
+Veterans - Counter to our initial hypothesis, veterans actually report less bad mental health days than non-veterans.
+
+Daily Drinks - As we saw above, bad mental health days and daily drinks are positively correlated.
+
+Sleep Time - Sleep and bad mental health days are negatively correlated, which seems natural given that sleep seems to be good for just about everything.
+
+General Health - This is by far the weirdest finding. It seems that general health is positively correlated with bad mental health days (and with large magnitudes too!). This would mean that reporting you are in a better general state of health is positively correlated with reporting more mental health days. In order to check the validity of this relationship, we connect the mean bad mental health days of each general health category.
 
 
+```{r, message= FALSE, warning= FALSE}
+require(mosaic)
+plotModel(lm(new_menthlth ~ new_genhlth, data = BRFSS))
+```
+
+The relationship holds! We will comment more on this oddity in our conclusion.
+```{r, include= FALSE, eval= FALSE}
+plotModel(lm(new_menthlth ~ new_veteran3, data = BRFSS))
+plotModel(lm(new_menthlth ~ new_sex, data = BRFSS))
+```
+
+
+
+### ANDREW STARTS HERE
 
 ### F-test
 
@@ -98,19 +202,9 @@ anova(brfssMod, brfssModNoInt)
 
 ### Residuals
 
-```{r}
-xyplot(rstandard(brfssMod) ~ fitted(brfssMod), cex = 0.2)
-```
-NEED HELP WITH THIS SECTION
-
 
 ##Variable Scatter Plots
 
-```{r}
-require(broom)
-residual_table <- augment(brfssMod)
-plot(BRFSS$new_menthlth, BRFSS$new_avedrnk2)
-```
 
 
 ### Variable Selection
@@ -132,7 +226,7 @@ which.min(col.best.sum$bic)
 
 
 
-###Confidence Interval
+###Confidence Intervals
 
 
 ```{r}
@@ -155,18 +249,6 @@ predict.lm(brfssMod, newdata =  data.frame(new_menthlth = 5), interval = "predic
 ### Summary
 
 
-
-
-
-```{r}
-brfssModT <- lm(log(new_menthlth + 1) ~ new_genhlth + new_sex + new_veteran3 + log(new_sleptim1 + 1) + log(new_avedrnk2 + 1) + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = BRFSS)
-
-
-brfssModQ <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 +I(new_sleptim1^2) + new_avedrnk2 + I(new_avedrnk2^2) + new_sex*new_avedrnk2 + new_sex*I(new_avedrnk2^2) + new_sex*new_veteran3 + new_veteran3*new_avedrnk2 + new_veteran3*I(new_avedrnk2^2), data = BRFSS)
-
-
-xyplot(rstandard(brfssModQ) ~ fitted(brfssModQ), cex = 0.2)
-```
 
 
 
