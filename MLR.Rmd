@@ -207,10 +207,6 @@ While all variables are significant, our overall model is not that precise, as w
 
 From the residual plot that was given earlier, it was evident 
 
-##Variable Scatter Plots
-
-
-
 ### Variable Selection
 ASK ABOUT THIS SECTION
 
@@ -248,7 +244,7 @@ add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_s
 add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3 + new_sex*new_veteran3, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 ```{r}
-add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
+#add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 Through forward selection, we end up with the same variables in the model as we had before. But does this make sense? And why did different variables show up??
 
@@ -260,19 +256,33 @@ Through forward selection, we end up with the same variables in the model as we 
 
 
 ```{r}
-#predict.lm(brfssMod, newdata =  data.frame(new_menthlth = 5), interval = "confidence")
+newdata <- data.frame(new_genhlth = 4,
+                      new_veteran3 = 1,
+                      new_sex = 1,
+                      new_avedrnk2 = 10,
+                      new_sleptim1 = 5)
+
+newdata$new_genhlth <- as.factor(newdata$new_genhlth)
+newdata$new_sex <- as.factor(newdata$new_sex)
+newdata$new_veteran3 <- as.factor(newdata$new_veteran3)
+
+predict.lm(brfssMod, newdata, interval = "confidence")
 ```
+We are 95% confident that the true mean value for days of poor mental health for a male veteran who had 10 drinks in the past 30 days, gets an average of 5 hours of sleep every 24 hours, and reports fair general health is between 8.07081 and 8.568849 days in the past 30 days.
 
 ```{r}
-#predict.lm(brfssMod, newdata =  data.frame(new_menthlth = 5), interval = "predict")
+predict.lm(brfssMod, newdata, interval = "predict")
 ```
-
+We are 95% confident that a male veteran who had 10 drinks in the past 30 days, gets an average of 5 hours of sleep every 24 hours, and reports fair general health will have had between -4.82903 (0) and 21.46869 days of poor mental health in the past 30 days.
 
 
 
 
 ### Coefficient of Partial Determination
 
+```{r}
+anova(brfssMod)
+```
 
 
 
