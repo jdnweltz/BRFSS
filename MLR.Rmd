@@ -193,15 +193,14 @@ plotModel(lm(new_menthlth ~ new_sex, data = BRFSS))
 brfssModNoInt <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2, data = BRFSS)
 anova(brfssMod, brfssModNoInt)
 ```
-From this F-test, we can see that at least one of the interaction terms is nonzero, indicating that ......
+From this F-test, we can see that at least one of the interaction terms is nonzero, indicating that the model with interaction terms is significantly different than the model without interaction terms. While the coefficients for the non-interaction model are all extremely significant (p-value of essentially 0), I would report the model with interaction terms, as all of the coefficients in that model are also significant (almost all with a p-value of essentially 0), and we know that the interaction terms add to the model's soundness.
 
 ### $R^2$ Values
 
 ```{r}
 summary(brfssMod)
 ```
-While all variables are significant, our overall model is not that precise, as we have a $R^2$ Value of 0.1099, and an Adjusted-$R^2$ Value of 0.1098.
-......
+While all variables are significant, our overall model is not that precise, as we have a $R^2$ Value of 0.1099, and an Adjusted-$R^2$ Value of 0.1098. Both our values of $R^2$ and Adjusted-$R^2$ tell us that approximately 11% of the variability in days of poor mental health is explained by the model, which is not a very good fit. There is no guarantee that our model wil accurately describe the population, and this is due to the size of our population. There is so much natural variability that occurs in the American population, and our data is from such a large sample size, that there will always be a ton of unexplained variability in our model, regardless of how precise it is.
 
 ### Residuals
 
@@ -250,7 +249,7 @@ Through forward selection, we end up with the same variables in the model as we 
 
 ### Model Interpretation
 
-
+This will be done once we are sure that we have the correct model, and that the forward selection was done correctly.
 
 ###Confidence Intervals
 
