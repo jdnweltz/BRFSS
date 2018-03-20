@@ -204,7 +204,35 @@ While all variables are significant, our overall model is not that precise, as w
 
 ### Residuals
 
-From the residual plot that was given earlier, it was evident 
+From the residual plot that was given earlier, it was evident that our data did not have normal variance centered around 0. This could very well be due to influence points that pull the line askew.
+
+```{r}
+ggplot(data = residual_table, aes(x = new_sleptim1, y = new_menthlth)) + 
+  geom_point(aes(color = .resid)) + scale_color_gradient2()
+```
+From this plot and the similar one earlier of number of drinks vs. days of poor mental health, we can see that although there are no points that are extreme outliers in the Y-direction for either relationship, there are some points that have extreme residuals. Let's see what happens when we remove them.
+
+It appears that points with values for number of drinks of 45, 70, 73, 75, and 76 have extremely low residuals, and points with values of hours of sleep greater than 11 have extremely high residuals.
+
+```{r}
+use_entries <- BRFSS %>% filter(new_sleptim1 < 12, new_avedrnk2 != 45, new_avedrnk2 != 70, new_avedrnk2 != 73, new_avedrnk2 != 75, new_avedrnk2 != 76)
+
+brfssModReduced <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = use_entries)
+
+xyplot(rstandard(brfssModReduced) ~ fitted(brfssModReduced), cex = 0.2)
+```
+While our residuals are still not normally distributed around 0, we do have a fit more condensed in the Y-direction, as our residuals range from -4 to 4 as opposed to -5 to 5 as was the case before. While it would be desirable to have residuals perfectly centered around 0, it seems that this is pretty unrealistic due to the sheer number of datapoints we have. Our sample size has so many observations that there is so much natural variability that cannot possibly be taken into account by a single line.
+
+
+
+
+
+
+
+
+
+
+
 
 ### Variable Selection
 ASK ABOUT THIS SECTION
@@ -219,31 +247,31 @@ which.max(col.best.sum$adjr2)
 which.min(col.best.sum$bic)
 ```
 ```{r}
-add1(lm(new_menthlth~1, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
+add1(lm(new_menthlth~1, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 ```{r}
-add1(lm(new_menthlth~new_genhlth, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
+add1(lm(new_menthlth~new_genhlth, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 ```{r}
-add1(lm(new_menthlth~new_genhlth + new_sleptim1, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
+add1(lm(new_menthlth~new_genhlth + new_sleptim1, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 ```{r}
-add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
+add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 ```{r}
-add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
+add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 ```{r}
-add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
+add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 ```{r}
-add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
+add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 ```{r}
-add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3 + new_sex*new_veteran3, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
+add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3 + new_sex*new_veteran3, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 ```{r}
-#add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data=BRFSS), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
+#add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
 Through forward selection, we end up with the same variables in the model as we had before. But does this make sense? And why did different variables show up??
 
@@ -265,20 +293,21 @@ newdata$new_genhlth <- as.factor(newdata$new_genhlth)
 newdata$new_sex <- as.factor(newdata$new_sex)
 newdata$new_veteran3 <- as.factor(newdata$new_veteran3)
 
-predict.lm(brfssMod, newdata, interval = "confidence")
+predict.lm(brfssModReduced, newdata, interval = "confidence")
 ```
-We are 95% confident that the true mean value for days of poor mental health for a male veteran who had 10 drinks in the past 30 days, gets an average of 5 hours of sleep every 24 hours, and reports fair general health is between 8.07081 and 8.568849 days in the past 30 days.
+We are 95% confident that the true mean value for days of poor mental health for a male veteran who had 10 drinks in the past 30 days, gets an average of 5 hours of sleep every 24 hours, and reports fair general health is between 8.318683 and 8.842484 days in the past 30 days.
 
 ```{r}
-predict.lm(brfssMod, newdata, interval = "predict")
+predict.lm(brfssModReduced, newdata, interval = "predict")
 ```
-We are 95% confident that a male veteran who had 10 drinks in the past 30 days, gets an average of 5 hours of sleep every 24 hours, and reports fair general health will have had between -4.82903 (0) and 21.46869 days of poor mental health in the past 30 days.
+We are 95% confident that a male veteran who had 10 drinks in the past 30 days, gets an average of 5 hours of sleep every 24 hours, and reports fair general health will have had between -4.449452 (0) and 21.61062 days of poor mental health in the past 30 days.
 
 
 
 
 ### Coefficient of Partial Determination
 
+I have to do with this updated model, but want to check if I'm doing this correctly first.
 ```{r}
 anova(brfssMod)
 ```
