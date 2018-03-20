@@ -283,8 +283,26 @@ We are 95% confident that a male veteran who had 10 drinks in the past 30 days, 
 ```{r}
 anova(brfssMod)
 ```
+Total SSE: 1272580
 
+new_genhlth: 986124/286456 = 3.442497
+How does this make sense??
 
+new_sex: 88080/1184500 = 0.07436049
+7.44% of the variation in days of poor mental health is due to sex being added to the model.
+Is this the correct way to interpret this??
+
+new_veteran3: 8228/1264352 = 0.006507681
+
+new_sleptim1: 116517/1156063 = 0.1007878
+
+new_avedrnk2: 62786/1209794 = 0.05189809
+
+new_sex:new_avedrnk2: 8520/1264060 = 0.006740186
+
+new_sex:new_veteran3: 1917/1270663 = 0.001508661
+
+new_veteran3:new_avedrnk2: 408/1272172 = 0.0003207114
 
 ### Summary
 
