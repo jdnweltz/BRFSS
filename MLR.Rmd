@@ -334,8 +334,18 @@ new_veteran3:new_avedrnk2: 408/1272172 = 0.0003207114
 
 ### Summary
 
+Questions:
 
+R^2 vs adj
+coeffient of partial determination
+forward selections results 
+influence points
+prediction intervals
 
+definition
+
+Id you have 2,3,4,5, adding 1 how much does it reduce SSE
+I would also look at her hw solutions to answer this question
 
 
 
