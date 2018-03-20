@@ -308,6 +308,8 @@ We are 95% confident that a male veteran who had 10 drinks in the past 30 days, 
 ### Coefficient of Partial Determination
 
 I have to do with this updated model, but want to check if I'm doing this correctly first.
+
+have to create new anova table for each calculation, adding variable of interest last for each one.
 ```{r}
 anova(brfssMod)
 ```
@@ -336,11 +338,11 @@ new_veteran3:new_avedrnk2: 408/1272172 = 0.0003207114
 
 Questions:
 
-R^2 vs adj
-coeffient of partial determination
-forward selections results 
-influence points
-prediction intervals
+R^2 vs adj - interpret R^2, not adjusted. adjusted just used for selection
+coeffient of partial determination - see definition below
+forward selections results - totally fine
+influence points - no need to do anything more here. Hardin said that our model isn't ever going to be perfect, so what we have is already good, we just need to explain it, which I feel we do.
+prediction intervals - doesn't make too much sense to do adjustments, as we're only creating one interval now, as opposed to how we made multiple intervals before
 
 definition
 
@@ -350,4 +352,7 @@ I would also look at her hw solutions to answer this question
 
 
 
-
+Things to do before next meeting with Hardin:
+change interpretation of R^2
+fix coefficient of partial determination
+add interpretation/analysis of forward selection and model interpretation as a whole
