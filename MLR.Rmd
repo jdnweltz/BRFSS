@@ -200,7 +200,7 @@ From this F-test, we can see that at least one of the interaction terms is nonze
 ```{r}
 summary(brfssMod)
 ```
-While all variables are significant, our overall model is not that precise, as we have a $R^2$ Value of 0.1099, and an Adjusted-$R^2$ Value of 0.1098. Both our values of $R^2$ and Adjusted-$R^2$ tell us that approximately 11% of the variability in days of poor mental health is explained by the model, which is not a very good fit. There is no guarantee that our model wil accurately describe the population, and this is due to the size of our population. There is so much natural variability that occurs in the American population, and our data is from such a large sample size, that there will always be a ton of unexplained variability in our model, regardless of how precise it is.
+While all variables are significant, our overall model is not that precise, as we have a $R^2$ Value of 0.1099. This tells us that approximately 11% of the variability in days of poor mental health is explained by the model, which is not a very good fit. There is no guarantee that our model wil accurately describe the population, and this is due to the size of our population. There is so much natural variability that occurs in the American population, and our data is from such a large sample size, that there will always be a ton of unexplained variability in our model, regardless of how precise it is.
 
 ### Residuals
 
@@ -277,7 +277,10 @@ Through forward selection, we end up with the same variables in the model as we 
 
 ### Model Interpretation
 
-This will be done once we are sure that we have the correct model, and that the forward selection was done correctly.
+Started with 5 variables (plues 3 interaction terms)
+Best subsets returned a model with all 8 terms
+The tried forward selection to see if there was any difference - there was not
+Concluded that a model with all terms is the best model to use, as all 8 terms are significant, but this still doesn't produce the most accurate results as our data is so dense and variate.
 
 ###Confidence Intervals
 
