@@ -221,21 +221,16 @@ brfssModReduced <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_
 
 xyplot(rstandard(brfssModReduced) ~ fitted(brfssModReduced), cex = 0.2)
 ```
-While our residuals are still not normally distributed around 0, we do have a fit more condensed in the Y-direction, as our residuals range from -4 to 4 as opposed to -5 to 5 as was the case before. While it would be desirable to have residuals perfectly centered around 0, it seems that this is pretty unrealistic due to the sheer number of datapoints we have. Our sample size has so many observations that there is so much natural variability that cannot possibly be taken into account by a single line.
+While our residuals are still not normally distributed around 0, we do have a fit more condensed in the Y-direction, as our residuals range from -4 to 4 as opposed to -5 to 5 as was the case before. While it would be desirable to have residuals perfectly centered around 0, it seems that this is pretty unrealistic due to the sheer number of datapoints we have. Our sample size has so many observations that there is so much natural variability that cannot possibly be taken into account by a single line. Since our residuals are still far from great, and will always be regardless of the subset of the data, we will proceed using the full dataset.
 
+We also observed from the pairs plots that there seemed to be an influential point (high leverage and high residual). In order to confirm that this vase was not driving the model, we plotted cooks distance and found that there were not extreme values. We believe that this result can be attrivuted to the high variance of our data.
 
-
-
-
-
-
-
-
-
+```{r}
+plot(cooks.distance(brfssMod), pch=20)
+```
 
 
 ### Variable Selection
-ASK ABOUT THIS SECTION
 
 ```{r}
 require(leaps)
@@ -273,7 +268,7 @@ add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_s
 ```{r}
 #add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
-Through forward selection, we end up with the same variables in the model as we had before. But does this make sense? And why did different variables show up??
+Through forward selection, we end up with the same variables in the model as we had before. 
 
 ### Model Interpretation
 
@@ -281,6 +276,8 @@ Started with 5 variables (plues 3 interaction terms)
 Best subsets returned a model with all 8 terms
 The tried forward selection to see if there was any difference - there was not
 Concluded that a model with all terms is the best model to use, as all 8 terms are significant, but this still doesn't produce the most accurate results as our data is so dense and variate.
+
+We started with our five variables, plus three interaction terms, and performed best subsets on these variables in order to get the best model. This selection process resulted in a model where all eight terms were significant. We then attempted to build the model using forward selection, which resulted in the same model with eight terms that was obtained through best subsets. Since both selection processes resulted in the same model, we concluded that this "full" model was the best model to use. But even though all eight terms are significant, this model still does not produce the most accurate predictions as seen by our $R^2$ value.
 
 ###Confidence Intervals
 
@@ -309,13 +306,6 @@ We are 95% confident that a male veteran who had 10 drinks in the past 30 days, 
 
 
 ### Coefficient of Partial Determination
-
-
-```{r}
-anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = use_entries))
-```
-
-
 
 ```{r}
 anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = BRFSS))
