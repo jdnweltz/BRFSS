@@ -307,32 +307,77 @@ We are 95% confident that a male veteran who had 10 drinks in the past 30 days, 
 
 ### Coefficient of Partial Determination
 
-I have to do with this updated model, but want to check if I'm doing this correctly first.
 
-have to create new anova table for each calculation, adding variable of interest last for each one.
 ```{r}
-anova(brfssMod)
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = use_entries))
 ```
-Total SSE: 1272580
 
-new_genhlth: 986124/286456 = 3.442497
-How does this make sense??
 
-new_sex: 88080/1184500 = 0.07436049
-7.44% of the variation in days of poor mental health is reduced due to sex being added to the model.
-Is this the correct way to interpret this??
 
-new_veteran3: 8228/1264352 = 0.006507681
+```{r}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = BRFSS))
+```
+```{r}
+408/(1272580 - 480)
+```
+When new_veteran3:new_avedrnk2 is added to a model containing all other variables, there is a reduction in SSE by 0.03%.
 
-new_sleptim1: 116517/1156063 = 0.1007878
+```{r}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3, data = BRFSS))
+```
+```{r}
+2022/(1272579 - 2022)
+```
+When new_sex:new_veteran3 is added to a model containing all other variables, there is a reduction in SSE by 0.16%.
 
-new_avedrnk2: 62786/1209794 = 0.05189809
+```{r}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2, data = BRFSS))
+```
+```{r}
+8977/(1272579 - 8977)
+```
+When new_sex:new_avedrnk2 is added to a model containing all other variables, there is a reduction in SSE by 0.16%.
 
-new_sex:new_avedrnk2: 8520/1264060 = 0.006740186
+```{r}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2, data = BRFSS))
+```
+```{r}
+62786/(1272579 - 62786)
+```
+When new_avedrnk2 is added to a model containing all other variables, there is a reduction in SSE by 5.2%.
 
-new_sex:new_veteran3: 1917/1270663 = 0.001508661
+```{r}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1, data = BRFSS))
+```
+```{r}
+110999/(1272579 - 110999)
+```
+When new_sleptim1 is added to a model containing all other variables, there is a reduction in SSE by 9.56%.
 
-new_veteran3:new_avedrnk2: 408/1272172 = 0.0003207114
+```{r}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1 + new_veteran3, data = BRFSS))
+```
+```{r}
+8228/(1272579 - 8228)
+```
+When new_veteran3 is added to a model containing all other variables, there is a reduction in SSE by 0.65%.
+
+```{r}
+anova(lm(new_menthlth ~ new_genhlth + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1 + new_veteran3 + new_sex, data = BRFSS))
+```
+```{r}
+84093/(1272579 - 84093)
+```
+When new_sex is added to a model containing all other variables, there is a reduction in SSE by 7.08%.
+
+```{r}
+anova(lm(new_menthlth ~ new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1 + new_veteran3 + new_sex + new_genhlth, data = BRFSS))
+```
+```{r}
+932108/(1272578 - 932108)
+```
+When new_genhlth is added to a model containing all other variables, there is a reduction in SSE by 273.77%.
+
 
 ### Summary
 
