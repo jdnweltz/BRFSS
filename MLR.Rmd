@@ -371,6 +371,9 @@ anova(lm(new_menthlth ~ new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_s
 ```
 When new_genhlth is added to a model containing all other variables, there is a reduction in SSE by 273.77%.
 
+All in all, gen_hlth is the most significant variable in terms of coefficient of partial determination by far, but new_avedrnk2, new_sleptim1, and new_sex also contribute heavily to the model, as their inclusion in it reduces SSE by 5-10%. All other variables, including the interaction terms have insignificant reductions in SSE.
+
+
 
 ### Summary
 
