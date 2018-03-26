@@ -2,7 +2,11 @@
 title: "BRFSS Health Survey - MLR"
 author: "Justin Weltz and Andrew Brown"
 date: "3/4/2018"
-output: pdf_document
+output:
+  html_document: default
+  pdf_document: default
+fig_width: 3
+fig_height: 2
 ---
 
 ```{r setup, include=FALSE}
@@ -19,7 +23,9 @@ library(skimr)
 BRFSS <- sasxport.get("LLCP2016.XPT ")
 
 #Columns 276-285
-BRFSS <- BRFSS %>% mutate(new_sex = ifelse(sex == 9, NA, sex))
+BRFSS <- BRFSS %>% mutate(new_sex = ifelse(sex == 9, NA, ifelse(sex == 2, 1, 
+                                                                ifelse 
+                                                                (sex==1,0, sex))))
 
 BRFSS <- BRFSS %>% mutate(new_sleptim1 = ifelse(sleptim1 == 99 | sleptim1 == 77, NA, sleptim1))
 
@@ -37,7 +43,7 @@ BRFSS <- BRFSS %>% mutate(new_exercise = ifelse(exerany2 == 7 | exerany2 == 9, N
 
 BRFSS <- BRFSS %>% mutate(new_educa = ifelse(educa == 9, NA,educa))
 
-BRFSS <- BRFSS %>% mutate(new_veteran3 = ifelse(veteran3 == 9 | veteran3 == 7, NA,veteran3))
+BRFSS <- BRFSS %>% mutate(new_veteran3 = ifelse(veteran3 == 9 | veteran3 == 7, NA,ifelse(veteran3 == 2, 1, ifelse(veteran3 ==1, 0, veteran3))))
 
 BRFSS <- BRFSS %>% mutate(new_income = ifelse(income2 == 99 | income2 == 77, NA, income2))
 
@@ -49,34 +55,35 @@ The Behavioral Risk Factor Surveillance System (BRFSS) is conducted by the Cente
 
 ### Model Building
 
-The BRFSS Data Set contains a variable called "Number of Days Mental Health Not Good," which is the interviewee's numerical response to the question: "Now thinking about your mental health, which includes stress, depression, and problems with emotions, for how many days during the past 30 days was your mental health not good?" We decided to regress this continuous variable on five explanatory variables. However, before moving forward, it is important to acknowledge that there is an interesting (and possibly problematic) imbalance to the days of bad mental health variable: 329,500 people report that they have experienced zero days of bad mental health in the past 30 days. This may pull our linear regressions in weird directions later in the project. But now, the explanatory variables:
+The BRFSS Data Set contains a variable called "Number of Days Mental Health Not Good," which is the interviewee's numerical response to the question: "Now thinking about your mental health, which includes stress, depression, and problems with emotions, for how many days during the past 30 days was your mental health not good?" We decided to regress this continuous variable on five explanatory variables. However, before moving forward, it is important to acknowledge that there is an interesting (and possibly problematic) imbalance to the days of bad mental health variable: 329,500 people report that they have experienced zero days of bad mental health in the past 30 days. But for now, let's look at the explanatory variables:
 
-1. Average Drinks - Continuous (This has distinct outliers; some participants reported that they have as many as 50 drinks a day).
+1. Average Drinks (per day) - Continuous (This has distinct outliers; some participants reported that they have as many as 50 drinks a day).
 
-2. General Health - Categorical (We coded this as a factor variable because, while it is on an incrementing scale, the responses are descriptive and therefore hard to quantatify relative to one another).
+2. General Health (1-5 scale) - Categorical (We coded this as a factor variable because, while it is on an incrementing scale, the responses are descriptive and therefore hard to quantatify relative to one another).
 
-3. Average Hours Slept - Continuous (This variable is pretty uniformly distributed around a mean of 7.054 hours).
+3. Average Hours Slept (per night) - Continuous (This variable is pretty uniformly distributed around a mean of 7.054 hours).
 
-4. Sex - Categorical (The paricipants are pretty evenly distributed between mena and women).
+4. Sex (0 male, 1 female)- Categorical (The paricipants are pretty evenly distributed between mena and women).
 
-5. Veteran Status - Categorical (The relationship between veteran status and Post Traumatic Stress Disorder may make it an interesting variable to analyze in the context of mental health).
+5. Veteran Status (0 veteran, 1 not a veteran) - Categorical (The relationship between veteran status and Post Traumatic Stress Disorder may make it an interesting variable to analyze in the context of mental health).
 
 ### Pairs Plot
 
-```{r,eval= TRUE}
+```{r}
 pairs(BRFSS[c(278, 280, 277, 281)], cex=0.3)
 ```
-Considering the number of observations we are analyzing, observations on a scatter plot should be taken with a lot of salt because it is very to distinguish the density of points with the naked eye. For example, the graphs associated with general health contain very little information because all the observations are compressed into 5 lines (We didn't even include the veteran and sex variable in the pairs plot because they had the same problem). Both the daily drinks variable and the sleep time seem to have a roughly parabolic relationship with bad mental health days variable and with eachother. In fact, it is interesting to note that daily drinks and daily sleep time have a very similar relationship to mental health. However, this does not mean that we should fit a parabolic term for each variable necessarily. In fact, these sideways parabolas seem to reflect a non-functional relationship (it fails the vertical line test), but again this hard to eyeball since we don't have a feel for the density of the points at this time. Lastly, it is interesting to note that there seems to be an outlier in the average drink variable that will be interesting to analyze later as an influential point.
+Considering the number of observations we are analyzing, observations on a scatter plot should be taken with a grain of salt because it is difficult to distinguish the density of points with the naked eye. For example, the graphs associated with general health contain very little information because all the observations are compressed into 5 lines (We didn't even include the veteran and sex variable in the pairs plot because they had the same problem). Both the daily drinks variable and the sleep time seem to have a roughly parabolic relationship with bad mental health days variable and with each other. In fact, it is interesting to note that daily drinks and daily sleep time have a very similar relationship to mental health. However, this does not mean that we should fit a parabolic term for each variable necessarily. In fact, these sideways parabolas seem to reflect a non-functional relationship (it fails the vertical line test), but again this hard to eyeball since we don't have a feel for the density of the points at this time. Lastly, it is interesting to note that there seems to be an outlier in the average drink variable. We will look at this point later as an influential point.
 
 ### Interaction
 
 There are a couple interactions that we will include in our model:
 
-1. Veteran and Sex: Male and female soldies may have significantly different experiences (that would have an effect on the prevalence of PTSD or other mental health problems).
+1. Veteran and Sex: Male and female soldiers may have significantly different experiences (that would have an effect on the prevalence of PTSD or other mental health problems).
 
 2. Veteran and Drink: We hypothesize that being in a generally vulnerable mental state (after war) and then drinking will be significantly different from drinking as a normal citizen.
 
-3. Sex and Drink: Since it seems that society views female and male drinking behavior differently, drinking as a female may be significantly different from drinking as a male (in terms of its correlation with bad mental health days).
+3. Sex and Drink: Since female and male drinking behavior differs (both in terms of perception, effect and frequency), drinking as a female may be significantly different from drinking as a male (in terms of its correlation with bad mental health days).
+
 
 
 ### Model Fitting
@@ -94,7 +101,7 @@ brfssMod <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim
 xyplot(rstandard(brfssMod) ~ fitted(brfssMod), cex = 0.2)
 ```
 
-It is clear that there are some problems here. First and foremost, the errors are far from normally distributed. This seems to be an issue with the functional relationship between X and Y - a problem that we would fix by doing some tranformations on X. However, after enumerable attempts (that I won't list here), we were not able to change this residual plot with transformations. 
+It is clear that there are some problems here. First and foremost, the errors are far from normally distributed. This seems to be an issue with the functional relationship between X and Y - a problem that we would fix by doing some tranformations on X. However, after enumerable attempts (that I won't list here), we were not able to change this residual plot with transformations on the X or Y variable. 
 
 We decided to look more closely at the relationship between our explanatory variables and bad mental health days:
 
@@ -130,9 +137,9 @@ ggplot(data = residual_table, aes(x = new_veteran3, y = new_menthlth)) +
   geom_point(aes(color = .resid))+ scale_color_gradient2()
 ```
 
-It is clear from this graph that the linear model believes daily drinks and bad mental health days to be generally positively correlated. This contradicts our initial obeservation that there doesn't seem to be a functional relationship between the two variables. Is this causing the problem? Should there be another variable in the model? Or, is this the true mean relationship between the two variables. It is still not possible to truly answer these questions with the plot above.
+It is clear from this graph that the linear model believes daily drinks and bad mental health days to be generally positively correlated. This contradicts our initial obeservation that there doesn't seem to be a functional relationship between the two variables. Is this causing the problem? Should there be another variable in the model? Or, is the linear model the true mean relationship between the two variables. It is still not possible to truly answer these questions with the plot above.
 
-Consequently, we try another analysis of the relationship between daily drinks and bad mental health days. If the average of bad mental health days conditional on daily drinks is in fact a positive linear relationship, then a moving weighted average (or spline?), should capture this trend as well. With this in mind, we create the graph below:
+Consequently, we try another analysis of the relationship between daily drinks and bad mental health days. If the average of bad mental health days conditional on daily drinks is in fact a positive linear relationship, then a smoothed conditional means method (geom smooth), should roughly capture this trend as well. With this in mind, we create the graph below:
 
 ```{r, warning= FALSE, message= FALSE}
 ggplot(data=BRFSS, aes(x= new_avedrnk2, y = new_menthlth )) + geom_point() + geom_smooth(method = "lm", se = T, color = "blue" ) + geom_smooth(se = T, color = "black")
@@ -143,7 +150,7 @@ ggplot(data=BRFSS, aes(x= new_avedrnk2, y = new_menthlth )) + geom_point() + geo
 ggplot(data=BRFSS, aes(x= new_sleptim1, y = new_menthlth )) + geom_point() + geom_smooth(method = "lm", se = T, color = "blue" ) + geom_smooth(se = T, color = "black")
 ```
 
-This is fascinating. While the linear regression is a positive, straight line (by construct), the spline reflects a different relationship. In the range of about 0-15 daily drinks, the two lines seem to approximate eachother. However, after the initial period, the line continues on its predetermined path while the spline curves into a horizontal line (suggesting very little relationship between the two variables in this higher range). While the spline is not necessarily the truth (this method has its own problems), the large discrepancy between these two methods' results may reflect a larger problem with including this variable in the model.
+This is fascinating. While the linear regression is a positive, straight line (by construct), the smoothed conditional means reflects a different relationship. In the range of about 0-15 daily drinks, the two lines seem to approximate each other. However, after the initial period, the line continues on its predetermined path while the smoothing method curves into a horizontal line (suggesting very little relationship between the two variables in this higher range). While the smoothed conditional means is not necessarily the truth (this method has its own problems), the large discrepancy between these two methods' results may reflect a larger problem with including this variable in the model.
 
 In this vein, we decide to fit a model without the daily drinks variable and look at the residual plot. 
 
@@ -160,7 +167,7 @@ The residual plot looks the same! At this point, for fear of banging our heads a
 summary(brfssMod)
 ```
 
-Now that we know our residual plot is far from ideal, it is important to take the inferences above with a grain of salt. That being said, this is a very impressive looking coefficient table.  Every p-value is essentialy 0, except for two of the interaction variables. However, in order to be conservative, let's just look at the sign of our coefficients so we are less likely to make false conclusions based on magnitudes that we can't properly contextualize with good estimates of standard error.
+Now that we know our residual plot is far from ideal, it is important to take the inferences above with a grain of salt. That being said, this is a very impressive looking coefficient table.  Every p-value is essentialy 0, except for two of the interaction variables (which are still significant at an alpha of 0.01. However, in order to be conservative, let's just look at the sign of our coefficients so we are less likely to make false conclusions based on magnitudes that we can't properly contextualize with good estimates of standard error.
 
 Sex - Men report more bad mental health days than women. Interesting.
 
@@ -171,6 +178,7 @@ Daily Drinks - As we saw above, bad mental health days and daily drinks are posi
 Sleep Time - Sleep and bad mental health days are negatively correlated, which seems natural given that sleep seems to be good for just about everything.
 
 General Health - This is by far the weirdest finding. It seems that general health is positively correlated with bad mental health days (and with large magnitudes too!). This would mean that reporting you are in a better general state of health is positively correlated with reporting more mental health days. In order to check the validity of this relationship, we connect the mean bad mental health days of each general health category.
+
 
 
 ```{r, message= FALSE, warning= FALSE}
@@ -193,18 +201,15 @@ plotModel(lm(new_menthlth ~ new_sex, data = BRFSS))
 brfssModNoInt <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2, data = BRFSS)
 anova(brfssMod, brfssModNoInt)
 ```
-From this F-test, we can see that at least one of the interaction terms is nonzero, indicating that the model with interaction terms is significantly different than the model without interaction terms. While the coefficients for the non-interaction model are all extremely significant (p-value of essentially 0), I would report the model with interaction terms, as all of the coefficients in that model are also significant (almost all with a p-value of essentially 0), and we know that the interaction terms add to the model's soundness.
+Although we believe that the interaction terms could be interesting reference points from a theoretical standpoint. We want to make sure that we are offering the most parsimonious model and eliminating unnecessary noise. In this vein, we decided to conduct an F-test comparing the full model to a (reduced) model without the interaction terms. We can see that at least one of the interaction terms is nonzero, indicating that the model with interaction terms is significantly different than the model without interaction terms. While the coefficients for the non-interaction model are all extremely significant (p-value of essentially 0), I would report the model with interaction terms, as all of the coefficients in that model are also significant (almost all with a p-value of essentially 0), and we know that the interaction terms add to the model's soundness according to the F-test.
 
 ### $R^2$ Values
 
-```{r}
-summary(brfssMod)
-```
-While all variables are significant, our overall model is not that precise, as we have a $R^2$ Value of 0.1099. This tells us that approximately 11% of the variability in days of poor mental health is explained by the model, which is not a very good fit. There is no guarantee that our model wil accurately describe the population, and this is due to the size of our population. There is so much natural variability that occurs in the American population, and our data is from such a large sample size, that there will always be a ton of unexplained variability in our model, regardless of how precise it is.
+Although we will conduct more model analysis/interpretation later in the model, it would be nice to take a preliminary look at how much variance or model explains. While all variables are significant, our overall model is not that precise, as we have a $R^2$ Value of 0.1099. This tells us that approximately 11% of the variability in days of poor mental health is explained by the model, which is not a very good fit. There is no guarantee that our model wil accurately describe the population, and this is due to the size of our population. There is so much natural variability that occurs in the American population, and our data is from such a large sample size, that there will always be a ton of unexplained variability (and possibly unobservable or unavailiable variables) in our model, regardless of how precise it is.
 
 ### Residuals
 
-From the residual plot that was given earlier, it was evident that our data did not have normal variance centered around 0. This could very well be due to influence points that pull the line askew.
+Now that we have delved deeper into the model, let's take a closer look at what might be driving our odd looking residual plot. From the residual plot that was given earlier, it was evident that our data did not have normal variance centered around 0. This could very well be due to influence points that pull the line askew.
 
 ```{r}
 ggplot(data = residual_table, aes(x = new_sleptim1, y = new_menthlth)) + 
@@ -212,77 +217,133 @@ ggplot(data = residual_table, aes(x = new_sleptim1, y = new_menthlth)) +
 ```
 From this plot and the similar one earlier of number of drinks vs. days of poor mental health, we can see that although there are no points that are extreme outliers in the Y-direction for either relationship, there are some points that have extreme residuals. Let's see what happens when we remove them.
 
-It appears that points with values for number of drinks of 45, 70, 73, 75, and 76 have extremely low residuals, and points with values of hours of sleep greater than 11 have extremely high residuals.
+It appears that points with values for number of drinks of 70 and above have extremely low residuals, and points with values of hours of sleep greater than 11 have extremely high residuals.
 
-```{r}
+```{r, include=FALSE}
 use_entries <- BRFSS %>% filter(new_sleptim1 < 12, new_avedrnk2 != 45, new_avedrnk2 != 70, new_avedrnk2 != 73, new_avedrnk2 != 75, new_avedrnk2 != 76)
 
 brfssModReduced <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = use_entries)
 
 xyplot(rstandard(brfssModReduced) ~ fitted(brfssModReduced), cex = 0.2)
 ```
-While our residuals are still not normally distributed around 0, we do have a fit more condensed in the Y-direction, as our residuals range from -4 to 4 as opposed to -5 to 5 as was the case before. While it would be desirable to have residuals perfectly centered around 0, it seems that this is pretty unrealistic due to the sheer number of datapoints we have. Our sample size has so many observations that there is so much natural variability that cannot possibly be taken into account by a single line. Since our residuals are still far from great, and will always be regardless of the subset of the data, we will proceed using the full dataset.
+While our residuals are still not normally distributed around 0, we do have a fit more condensed in the Y-direction, as our residuals range from -4 to 4 as opposed to -5 to 5 as was the case before. While it would be desirable to have residuals perfectly centered around 0, it seems that this is pretty unrealistic due to the sheer number of data points we have. Our sample size has so many observations that there is so much natural variability that cannot possibly be taken into account by a single line (it is possible that a partitioning method like random forests might be better suited to the data). Since our residuals are still far from great, and will always be regardless of the subset of the data, we will proceed using the full dataset.
 
-We also observed from the pairs plots that there seemed to be an influential point (high leverage and high residual). In order to confirm that this vase was not driving the model, we plotted cooks distance and found that there were not extreme values. We believe that this result can be attrivuted to the high variance of our data.
+We also observed from the pairs plots that there seemed to be an influential point (high leverage and high residual). In order to confirm that this case was not driving the model, we plotted cooks distance and found that there were not extreme values. We believe that this result can be attributed to the high variance of our data.
 
-```{r}
-plot(cooks.distance(brfssMod), pch=20)
-```
 
 
 ### Variable Selection
 
-```{r}
-require(leaps)
+In this section we attempt to truly wrestle with what variables are most important for our model. Since we are only working with five variables, we decided to use the best subsets selection method because this will allow us to investigate all possible combinations of the variables we are considering (this is in contrast to forward and backward selection which only considers a subset of these combinations).
 
-col.best <- regsubsets(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_avedrnk2 + new_sleptim1, data = BRFSS, nvmax=5)
-col.best.sum <- summary(col.best)
-which.min(col.best.sum$cp)
-which.max(col.best.sum$adjr2)
-which.min(col.best.sum$bic)
-```
-```{r}
+
+
+Through best subsets, we ended up with the full model!
+
+In order to get a better sense of how variables were prioritized when being selected, we implemented a step by step forward selection process.
+
+```{r, include= FALSE, eval= FALSE}
 add1(lm(new_menthlth~1, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
-```{r}
+```{r, eval= FALSE}
 add1(lm(new_menthlth~new_genhlth, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
-```{r}
+```{r, eval= FALSE}
 add1(lm(new_menthlth~new_genhlth + new_sleptim1, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
-```{r}
+```{r, include= FALSE, eval= FALSE}
 add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
-```{r}
+```{r, include= FALSE, eval= FALSE}
 add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
-```{r}
+```{r, include= FALSE, eval= FALSE}
 add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
-```{r}
+```{r, include= FALSE, eval= FALSE}
 add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
-```{r}
+```{r, include= FALSE, eval= FALSE}
 add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3 + new_sex*new_veteran3, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
 ```
-```{r}
-#add1(lm(new_menthlth~new_genhlth + new_sleptim1 + new_sex + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data=use_entries), new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, test = "F")
-```
-Through forward selection, we end up with the same variables in the model as we had before. 
+Through forward selection, we end up with the same variables in the model as we had before. Although the differences in AIC between the current model and a model with an added variable at each step along the way were not huge (especially when we got to adding the interaction terms), the variables are still significant, so we include them in the model.
 
 ### Model Interpretation
 
-Started with 5 variables (plues 3 interaction terms)
-Best subsets returned a model with all 8 terms
-The tried forward selection to see if there was any difference - there was not
-Concluded that a model with all terms is the best model to use, as all 8 terms are significant, but this still doesn't produce the most accurate results as our data is so dense and variate.
+We started with our five variables, plus three interaction terms, and performed best subsets on these variables in order to get the best model. This selection process resulted in a model where all eight terms were significant. Since both selection processes resulted in the same model, we concluded that this "full" model was the best model to use. But even though all eight terms are significant, this model still does not produce the most accurate predictions as seen by our $R^2$ value.
 
-We started with our five variables, plus three interaction terms, and performed best subsets on these variables in order to get the best model. This selection process resulted in a model where all eight terms were significant. We then attempted to build the model using forward selection, which resulted in the same model with eight terms that was obtained through best subsets. Since both selection processes resulted in the same model, we concluded that this "full" model was the best model to use. But even though all eight terms are significant, this model still does not produce the most accurate predictions as seen by our $R^2$ value.
+### Coefficient of Partial Determination
+
+```{r, eval= FALSE}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = BRFSS))
+```
+```{r, include= FALSE, eval= FALSE}
+408/(1272580 - 480)
+```
+When new_veteran3:new_avedrnk2 is added to a model containing all other variables, there is a reduction in SSE by 0.03%.
+
+```{r, eval= FALSE}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3, data = BRFSS))
+```
+```{r, include= FALSE, eval= FALSE}
+2022/(1272579 - 2022)
+```
+When new_sex:new_veteran3 is added to a model containing all other variables, there is a reduction in SSE by 0.16%.
+
+```{r, eval= FALSE}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2, data = BRFSS))
+```
+```{r, include= FALSE, eval= FALSE}
+8977/(1272579 - 8977)
+```
+When new_sex:new_avedrnk2 is added to a model containing all other variables, there is a reduction in SSE by 0.16%.
+
+```{r, eval= FALSE}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2, data = BRFSS))
+```
+```{r, include= FALSE, eval= FALSE}
+62786/(1272579 - 62786)
+```
+When new_avedrnk2 is added to a model containing all other variables, there is a reduction in SSE by 5.2%.
+
+```{r, eval= FALSE}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1, data = BRFSS))
+```
+```{r, include= FALSE, eval= FALSE}
+110999/(1272579 - 110999)
+```
+When new_sleptim1 is added to a model containing all other variables, there is a reduction in SSE by 9.56%.
+
+```{r, eval= FALSE}
+anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1 + new_veteran3, data = BRFSS))
+```
+```{r, include= FALSE, eval= FALSE}
+8228/(1272579 - 8228)
+```
+When new_veteran3 is added to a model containing all other variables, there is a reduction in SSE by 0.65%.
+
+```{r, eval= FALSE}
+anova(lm(new_menthlth ~ new_genhlth + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1 + new_veteran3 + new_sex, data = BRFSS))
+```
+```{r, include= FALSE, eval= FALSE}
+84093/(1272579 - 84093)
+```
+When new_sex is added to a model containing all other variables, there is a reduction in SSE by 7.08%.
+
+```{r, eval= FALSE}
+anova(lm(new_menthlth ~ new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1 + new_veteran3 + new_sex + new_genhlth, data = BRFSS))
+```
+```{r, include= FALSE, eval= FALSE}
+932108/(1272578 - 932108)
+```
+When new_genhlth is added to a model containing all other variables, there is a reduction in SSE by 273.77%.
+
+All in all, gen_hlth is the most significant variable in terms of coefficient of partial determination by far, but new_avedrnk2, new_sleptim1, and new_sex also contribute heavily to the model, as their inclusion in it reduces SSE by 5-10%. All other variables, including the interaction terms have insignificant reductions in SSE. This is consistent with what we found through our forward selection, as the interaction terms are not as significant as the other, non-interactive terms, but are still significant in the lens of the model as a whole.
 
 ###Confidence Intervals
 
 
-```{r}
+```{r, eval= FALSE}
 newdata <- data.frame(new_genhlth = 4,
                       new_veteran3 = 1,
                       new_sex = 1,
@@ -295,85 +356,18 @@ newdata$new_veteran3 <- as.factor(newdata$new_veteran3)
 
 predict.lm(brfssModReduced, newdata, interval = "confidence")
 ```
-We are 95% confident that the true mean value for days of poor mental health for a male veteran who had 10 drinks in the past 30 days, gets an average of 5 hours of sleep every 24 hours, and reports fair general health is between 8.318683 and 8.842484 days in the past 30 days.
+We are 95% confident that the true mean value for days of poor mental health for a female non-veteran who had 10 drinks in the past 30 days, gets an average of 5 hours of sleep every 24 hours, and reports fair general health is between 8.318683 and 8.842484 days in the past 30 days.
 
-```{r}
+```{r, eval= FALSE}
 predict.lm(brfssModReduced, newdata, interval = "predict")
 ```
-We are 95% confident that a male veteran who had 10 drinks in the past 30 days, gets an average of 5 hours of sleep every 24 hours, and reports fair general health will have had between -4.449452 (0) and 21.61062 days of poor mental health in the past 30 days.
-
-
-
-
-### Coefficient of Partial Determination
-
-```{r}
-anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = BRFSS))
-```
-```{r}
-408/(1272580 - 480)
-```
-When new_veteran3:new_avedrnk2 is added to a model containing all other variables, there is a reduction in SSE by 0.03%.
-
-```{r}
-anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3, data = BRFSS))
-```
-```{r}
-2022/(1272579 - 2022)
-```
-When new_sex:new_veteran3 is added to a model containing all other variables, there is a reduction in SSE by 0.16%.
-
-```{r}
-anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2, data = BRFSS))
-```
-```{r}
-8977/(1272579 - 8977)
-```
-When new_sex:new_avedrnk2 is added to a model containing all other variables, there is a reduction in SSE by 0.16%.
-
-```{r}
-anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2, data = BRFSS))
-```
-```{r}
-62786/(1272579 - 62786)
-```
-When new_avedrnk2 is added to a model containing all other variables, there is a reduction in SSE by 5.2%.
-
-```{r}
-anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1, data = BRFSS))
-```
-```{r}
-110999/(1272579 - 110999)
-```
-When new_sleptim1 is added to a model containing all other variables, there is a reduction in SSE by 9.56%.
-
-```{r}
-anova(lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1 + new_veteran3, data = BRFSS))
-```
-```{r}
-8228/(1272579 - 8228)
-```
-When new_veteran3 is added to a model containing all other variables, there is a reduction in SSE by 0.65%.
-
-```{r}
-anova(lm(new_menthlth ~ new_genhlth + new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1 + new_veteran3 + new_sex, data = BRFSS))
-```
-```{r}
-84093/(1272579 - 84093)
-```
-When new_sex is added to a model containing all other variables, there is a reduction in SSE by 7.08%.
-
-```{r}
-anova(lm(new_menthlth ~ new_veteran3*new_avedrnk2 + new_sex*new_veteran3 + new_sex*new_avedrnk2 + new_avedrnk2 + new_sleptim1 + new_veteran3 + new_sex + new_genhlth, data = BRFSS))
-```
-```{r}
-932108/(1272578 - 932108)
-```
-When new_genhlth is added to a model containing all other variables, there is a reduction in SSE by 273.77%.
-
-All in all, gen_hlth is the most significant variable in terms of coefficient of partial determination by far, but new_avedrnk2, new_sleptim1, and new_sex also contribute heavily to the model, as their inclusion in it reduces SSE by 5-10%. All other variables, including the interaction terms have insignificant reductions in SSE.
-
+We are 95% confident that a female non-veteran who had 10 drinks in the past 30 days, gets an average of 5 hours of sleep every 24 hours, and reports fair general health will have had between -4.449452 (0) and 21.61062 days of poor mental health in the past 30 days.
 
 
 ### Summary
 
+All in all, our data is just too convoluted to get any meaningful analysis from our MLR. We obtained a significant model, but that model was unable to overcome the vast variability in our data. The significance in the model was just due to the fact that it could've been a lot worse. But this can be expected given the population we're working with. The American population is an extremely diverse group of people, where no two people are alike. With this level of diversity in our population, and subsequently, our sample, meaningful conclusions cannot be made. 
+
+
+
+We conducted 98 total hypothesis tests. If we multiplied every pvalue by 98, 5 different conclusions would have changed. All of these are testing the significance of variables, which were initially significant, and now will become insignificant.
