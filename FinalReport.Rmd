@@ -50,13 +50,26 @@ The Behavioral Risk Factor Surveillance System (BRFSS) is conducted by the Cente
 
 Running RR
 ```{r}
+BRFSS[276] <- as.numeric(unlist(BRFSS[276]))
+BRFSS[277] <- as.numeric(unlist(BRFSS[277]))
+BRFSS[278] <- as.numeric(unlist(BRFSS[278]))
+BRFSS[279] <- as.numeric(unlist(BRFSS[279]))
+BRFSS[280] <- as.numeric(unlist(BRFSS[280]))
+BRFSS[281] <- as.numeric(unlist(BRFSS[281]))
+BRFSS[282] <- as.numeric(unlist(BRFSS[282]))
+BRFSS[283] <- as.numeric(unlist(BRFSS[283]))
+BRFSS[284] <- as.numeric(unlist(BRFSS[284]))
+BRFSS[285] <- as.numeric(unlist(BRFSS[285]))
+brfss.shrink.use <- cbind(BRFSS[276], BRFSS[277], BRFSS[279], BRFSS[280], BRFSS[281], BRFSS[282], BRFSS[283], BRFSS[284], BRFSS[285])
+
+
 lambda.grid =10^seq(5,-2, length =100)
-brfss.test <- sample_n(BRFSS, 48630)
-brfss.train <- BRFSS[!brfss.test] 
 
-brfss.ridge <- glmnet(as.matrix(brfss.train[276:277,279:285]), brfss.train[278], alpha=0, lambda = lambda.grid, standardize=TRUE)
+brfss.ridge.cv <- cv.glmnet(as.matrix(brfss.shrink.use), BRFSS[278], alpha=0, lambda = lambda.grid, standardize=TRUE)
 
-brfss.ridge.cv <- cv.glmnet(as.matrix(brfss.train[276:277,279:285]), brfss.train[278], alpha=0, lambda = lambda.grid, standardize=TRUE)
+brfss.ridge <- glmnet(as.matrix(BRFSS[276:277,279:285]), BRFSS[278], alpha=0, lambda = lambda.grid, standardize=TRUE)
+
+BRFSS[,276:277,279:285]
 ```
 
 Running Lasso
@@ -75,10 +88,13 @@ brfssModReduced <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_
 
 Plot of all 3
 ```{r}
-plot(x = seq(1,100,5), y = seq(1,5,1))
-lines() #MLR here
-lines() #RR here
-lines() #Lasso here
+lasso_pred = predict(pr.lasso)
+rr_pred = predict(brfss.ridge)
+mlr_pred = predict(brfssModReduced)
+plot(x = BRFSS$new_menthlth, y = lasso_pred )
+lines(x = BRFSS$new_menthlth,rr_pred )
+lines(BRFSS$new_menthlth, mlr_pred)
+
 ```
 
 
@@ -87,7 +103,67 @@ lines() #Lasso here
 
 ### Beyond Linearity
 
+```{r}
+#choosing number of drinks per day as our explanatory variable
 
+require(splines)
+
+#Regression Splines
+
+#df = 4
+brfss.knot4 <- bs(BRFSS$new_avedrnk2, degree = 3, df = 4)
+brfss.spline4 <- lm(new_menthlth ~ brfss.knot4, data=BRFSS)
+brfss.spline4.pred <- predict(brfss.spline4)
+
+#df = 6
+brfss.knot6 <- bs(BRFSS$new_avedrnk2, degree = 3, df = 6)
+brfss.spline6 <- lm(new_menthlth ~ brfss.knot6, data=BRFSS)
+brfss.spline6.pred <- predict(brfss.spline6)
+
+#df = 8
+brfss.knot8 <- bs(BRFSS$new_avedrnk2, degree = 3, df = 8)
+brfss.spline8 <- lm(new_menthlth ~ brfss.knot8, data=BRFSS)
+brfss.spline8.pred <- predict(brfss.spline8)
+
+#df = 10
+brfss.knot10 <- bs(BRFSS$new_avedrnk2, degree = 3, df = 10)
+brfss.spline10 <- lm(new_menthlth ~ brfss.knot10, data=BRFSS)
+brfss.spline10.pred <- predict(brfss.spline10)
+
+#Loess
+
+#New_average drink is too repetitive, causing it to behave like a discrete or factor variable instead of a continuous one. We could increase the span in order to compensate for this obstacle, however it is recommended that we jitter the values instead.
+
+#https://stackoverflow.com/questions/38864458/loess-warnings-errors-related-to-span-in-r
+
+BRFSS$new_avedrnk2 <- jitter(BRFSS$new_avedrnk2, factor = 0.2)
+
+BRFSS.lor1 <- loess(new_menthlth ~ new_avedrnk2, span=(4/10), data=BRFSS)
+brfss.lor1.pred <- predict(brfss.lor1)
+
+BRFSS.lor3 <- loess(new_menthlth ~ new_avedrnk2, span=(6/10), data=BRFSS)
+brfss.lor3.pred <- predict(brfss.lor3)
+
+BRFSS.lor5 <- loess(new_menthlth ~ new_avedrnk2, span=(8/10), data=BRFSS)
+brfss.lor5.pred <- predict(brfss.lor5)
+
+BRFSS.lor7 <- loess(new_menthlth ~ new_avedrnk2, span=(1), data=BRFSS)
+brfss.lor7.pred <- predict(brfss.lor7)
+
+```
+
+Plot of all 8 models
+```{r}
+plot(x = BRFSS$new_avedrnk2, y = BRFSS$new_menthlth)
+lines(x = BRFSS$new_avedrnk2, y =brfss.spline4.pred, col = "red")
+lines(x = BRFSS$new_avedrnk2, y =brfss.spline6.pred, col = "lightblue")
+lines(x = BRFSS$new_avedrnk2, y =brfss.spline8.pred, col = "green")
+lines(x = BRFSS$new_avedrnk2, y =brfss.spline10.pred, col = "orange")
+lines(x = BRFSS$new_avedrnk2, y =brfss.lor1.pred, col = "purple")
+lines(x = BRFSS$new_avedrnk2, y =brfss.lor3.pred, col = "gold")
+lines(x = BRFSS$new_avedrnk2, y =brfss.lor5.pred, col = "navyblue")
+lines(x = BRFSS$new_avedrnk2, y =brfss.lor7.pred, col = "black")
+```
 
 
 
