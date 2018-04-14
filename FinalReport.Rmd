@@ -1,0 +1,104 @@
+---
+title: "FinalReport"
+author: "Justin Weltz and Andrew Brown"
+date: "4/13/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(Hmisc)
+library(foreign)
+library(dplyr)
+library(ggplot2)
+library(skimr)
+BRFSS <- sasxport.get("LLCP2016.XPT ")
+
+#Columns 276-285
+BRFSS <- BRFSS %>% mutate(new_sex = ifelse(sex == 9, NA, ifelse(sex == 2, 1, 
+                                                                ifelse 
+                                                                (sex==1,0, sex))))
+
+BRFSS <- BRFSS %>% mutate(new_sleptim1 = ifelse(sleptim1 == 99 | sleptim1 == 77, NA, sleptim1))
+
+BRFSS <- BRFSS %>% mutate(new_menthlth = ifelse(menthlth == 99 | menthlth == 77, NA,                                      ifelse(menthlth == 88, 0, menthlth)))
+
+BRFSS <- BRFSS %>% mutate(new_poorhlth = ifelse(poorhlth == 99 | poorhlth == 77, NA, 
+                                                ifelse(poorhlth == 88, 0, poorhlth)))
+
+BRFSS <- BRFSS %>% mutate(new_avedrnk2 = ifelse(avedrnk2 == 99 | avedrnk2 == 77, NA,avedrnk2))
+
+BRFSS <- BRFSS %>% mutate(new_genhlth = ifelse(genhlth == 9 | 
+                                                 genhlth == 7, NA, genhlth))
+
+BRFSS <- BRFSS %>% mutate(new_exercise = ifelse(exerany2 == 7 | exerany2 == 9, NA,exerany2))
+
+BRFSS <- BRFSS %>% mutate(new_educa = ifelse(educa == 9, NA,educa))
+
+BRFSS <- BRFSS %>% mutate(new_veteran3 = ifelse(veteran3 == 9 | veteran3 == 7, NA,ifelse(veteran3 == 2, 1, ifelse(veteran3 ==1, 0, veteran3))))
+
+BRFSS <- BRFSS %>% mutate(new_income = ifelse(income2 == 99 | income2 == 77, NA, income2))
+
+```
+
+### Introduction
+
+The Behavioral Risk Factor Surveillance System (BRFSS) is conducted by the Centers for Disease Control (CDC) on the United States Population (and is supposed to capture the noninstitutionalized adult population older than 18 years residing in the United States). The public data set contains 486,303 observations. Each of these rows are individuals contacted by telephone (this biases the population they are sampling from and may make inferences taken from this study non-applicable to the general US population). There are 279 accessible variables (a lot of demographic information is omitted in order to preserve anonymity) on demographic characteristics, health-related risk behaviors, chronic health conditions, and use of preventative services. However, we will only be studying a subset of these dimensions.
+
+### Shrinkage Models
+
+Running RR
+```{r}
+lambda.grid =10^seq(5,-2, length =100)
+brfss.test <- sample_n(BRFSS, 48630)
+brfss.train <- BRFSS[!brfss.test] 
+
+brfss.ridge <- glmnet(as.matrix(brfss.train[276:277,279:285]), brfss.train[278], alpha=0, lambda = lambda.grid, standardize=TRUE)
+
+brfss.ridge.cv <- cv.glmnet(as.matrix(brfss.train[276:277,279:285]), brfss.train[278], alpha=0, lambda = lambda.grid, standardize=TRUE)
+```
+
+Running Lasso
+```{r}
+pr.lasso <- glmnet(as.matrix(brfss.train[276:277,279:285]), brfss.train[278], alpha=1, lambda = lambda.grid, standardize=TRUE)
+
+pr.lasso.cv <- cv.glmnet(as.matrix(brfss.train[276:277,279:285]), brfss.train[278], alpha=1, lambda = lambda.grid, standardize=TRUE)
+```
+
+MLR Model
+```{r}
+use_entries <- BRFSS %>% filter(new_sleptim1 < 12, new_avedrnk2 != 45, new_avedrnk2 != 70, new_avedrnk2 != 73, new_avedrnk2 != 75, new_avedrnk2 != 76)
+
+brfssModReduced <- lm(new_menthlth ~ new_genhlth + new_sex + new_veteran3 + new_sleptim1 + new_avedrnk2 + new_sex*new_avedrnk2 + new_sex*new_veteran3 + new_veteran3*new_avedrnk2, data = use_entries)
+```
+
+Plot of all 3
+```{r}
+plot(x = seq(1,100,5), y = seq(1,5,1))
+lines() #MLR here
+lines() #RR here
+lines() #Lasso here
+```
+
+
+
+
+
+### Beyond Linearity
+
+
+
+
+
+### Something New
+
+
+
+
+
+### Summary
+
+
+
+
